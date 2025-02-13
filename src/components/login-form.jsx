@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import React from "react"
 import { Link } from 'react-router-dom'
 
+
 export function LoginForm({
   className,
   ...props
@@ -74,7 +75,7 @@ export function LoginForm({
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
-               <a href="/signup" className="text-blue-600 underline-offset-4 hover:underline">SignUp</a>
+               <Link to="/signup" className="text-blue-600 underline-offset-4 hover:underline">SignUp</Link>
               </div>
             </div>
           </form>

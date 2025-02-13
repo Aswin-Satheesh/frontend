@@ -28,7 +28,7 @@ const LandingPage = () => {
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild variant="ghost" size="lg">
-                <Link to="/login">Login</Link>
+                <Link to="/login">Get Started</Link>
               </Button>
               {/* <Button variant="ghost" asChild size="lg">
                 <Link to="/signup">Sign Up</Link>
