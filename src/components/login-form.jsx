@@ -9,14 +9,71 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import React from "react"
-import { Link } from 'react-router-dom'
+import React, { useState } from "react"
+import { Link, useNavigate } from 'react-router-dom'
 
 
 export function LoginForm({
   className,
   ...props
 }) {
+  const navi = useNavigate();
+  const [formData, setState] = useState({
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          'full_name': formData.email,
+          'password': formData.password
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+      // Store the token and user type in localStorage
+      localStorage.setItem('jwt', JSON.stringify(data.token));
+      localStorage.setItem('user_type', JSON.stringify(data.user_type));
+      
+      // Redirect based on user type
+      switch (data.user_type) {
+        case 'patient':
+          navi('/pd');
+          break;
+        case 'doctor':
+          navi('/dd');
+          break;
+        case 'admin':
+          navi('/ad');
+          break;
+        default:
+          navi('/');
+          break;
+      }
+    } catch (err) {
+      setError('Invalid credentials');
+    }
+  };
+
+  const handleChange = (e) => {
+    setState({
+      ...formData,
+      [e.target.id]: e.target.value
+    });
+  };
+
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
         <div className="flex w-full max-w-sm flex-col gap-6">
@@ -29,7 +86,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-6">
               <div className="flex flex-col gap-4">
                 <Button variant="outline" className="w-full">
@@ -57,8 +114,15 @@ export function LoginForm({
               </div>
               <div className="grid gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="m@example.com" required />
+                  <Label htmlFor="email">Name</Label>
+                  <Input 
+                    id="email" 
+                    type="text" 
+                    placeholder="m@example.com" 
+                    required 
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <div className="flex items-center">
@@ -67,8 +131,19 @@ export function LoginForm({
                       Forgot your password?
                     </a>
                   </div>
-                  <Input id="password" type="password" required />
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    required 
+                    value={formData.password}
+                    onChange={handleChange}
+                  />
                 </div>
+                {error && (
+                  <div className="text-red-500 text-sm text-center">
+                    {error}
+                  </div>
+                )}
                 <Button type="submit" className="w-full">
                   Login
                 </Button>

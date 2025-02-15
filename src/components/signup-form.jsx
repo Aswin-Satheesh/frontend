@@ -24,6 +24,74 @@ export function SignUpForm({
   className,
   ...props
 }) {
+  const [formData, setFormData] = React.useState({
+    full_name: '',
+    email: '',
+    phone_number: '',
+    password: '',
+  });
+  const [error, setError] = React.useState('');
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords don't match");
+      return;
+    }
+
+    const requestData = {
+      full_name: formData.full_name,
+      email: formData.email,
+      phone_number: formData.phone_number,
+      password: formData.password
+    };
+
+    console.log('Sending data:', requestData); // Debug log
+
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/create-patient/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      const data = await response.json();
+      console.log('Response:', data); // Debug log
+
+      if (!response.ok) {
+        // Handle different types of error responses
+        if (typeof data === 'object') {
+          // If the error is an object with multiple field errors
+          const errorMessage = Object.entries(data)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
+          throw new Error(errorMessage);
+        } else if (data.detail) {
+          throw new Error(data.detail);
+        } else {
+          throw new Error('Registration failed. Please try again.');
+        }
+      }
+
+      // Handle successful registration
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Error details:', err); // More detailed error logging
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
         <div className="flex w-full max-w-sm flex-col gap-6">
@@ -36,8 +104,9 @@ export function SignUpForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-6">
+              {error && <div className="text-red-500 text-sm text-center">{error}</div>}
               <div className="flex flex-col gap-4">
                 <Button variant="outline" className="w-full">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -65,17 +134,38 @@ export function SignUpForm({
               <div className="grid gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" type="text" placeholder="John Doe" required />
+                  <Input 
+                    id="full_name" 
+                    type="text" 
+                    placeholder="John Doe" 
+                    required 
+                    value={formData.full_name}
+                    onChange={handleChange}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="m@example.com" required />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="m@example.com" 
+                    required 
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" required />
+                  <Input 
+                    id="phone_number" 
+                    type="tel" 
+                    placeholder="+1 (555) 000-0000" 
+                    required 
+                    value={formData.phone_number}
+                    onChange={handleChange}
+                  />
                 </div>
-                <div className="grid gap-2">
+                {/* <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
                   <Select required>
                     <SelectTrigger id="role">
@@ -88,14 +178,26 @@ export function SignUpForm({
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
                 <div className="grid gap-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required />
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    required 
+                    value={formData.password}
+                    onChange={handleChange}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <Input id="confirm-password" type="password" required />
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    required 
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                  />
                 </div>
                 <Button type="submit" className="w-full">
                   Create Account
