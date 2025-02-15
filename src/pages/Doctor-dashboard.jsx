@@ -1,5 +1,4 @@
-// ... existing imports ...
-import { Search, FileText } from 'lucide-react'
+import { Search, FileText, CreditCard } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,10 +21,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { format, isValid, parseISO } from 'date-fns'
 import { toast } from 'react-hot-toast'
-import { CreditCard } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export function DoctorDashboard() {  // Renamed from PatientDashboard
-  // ... existing state ...
   const [searchTerm, setSearchTerm] = useState("")
   const [medications, setMedications] = useState([])
   const [selectedMedications, setSelectedMedications] = useState([])
@@ -35,14 +33,13 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
   const [loadingAppointments, setLoadingAppointments] = useState(true)
   const [bills, setBills] = useState([])
   const [loadingBills, setLoadingBills] = useState(true)
+  const [pharmacyOrders, setPharmacyOrders] = useState([])
+  const [loadingPharmacyOrders, setLoadingPharmacyOrders] = useState(true)
   const [appointmentId, setAppointmentId] = useState(null)
   const [prescriptionDescription, setPrescriptionDescription] = useState("")
   const [loadingMedications, setLoadingMedications] = useState(true)
+  const navigate = useNavigate()
 
-  // Example appointments data
- 
-
-  // Add profile fetching useEffect
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -76,12 +73,10 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
     fetchProfile()
   }, [])
 
-  // Add a debug log to see when profile updates
   useEffect(() => {
     console.log("Current profile state:", profile)
   }, [profile])
 
-  // Modified appointment fetching useEffect
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
@@ -108,12 +103,10 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
         const data = await response.json()
         console.log("Appointments data:", data)
         
-        // Filter appointments for the logged-in doctor using doctor_name
         const doctorAppointments = Array.isArray(data) 
           ? data.filter(apt => apt.doctor_name.toLowerCase() === profile?.user?.full_name.toLowerCase())
           : data.doctor_name.toLowerCase() === profile?.user?.full_name.toLowerCase() ? [data] : []
         
-        // Sort appointments by token number
         const sortedAppointments = doctorAppointments.sort((a, b) => 
           parseInt(a.token_no) - parseInt(b.token_no)
         )
@@ -128,18 +121,15 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
       }
     }
 
-    // Only fetch if we have the doctor's name from profile
     if (profile?.user?.full_name) {
       fetchAppointments()
     }
   }, [selectedDate, profile])
 
-  // Add debug log for profile
   useEffect(() => {
     console.log("Current doctor profile:", profile)
   }, [profile])
 
-  // Modified formatDate helper function
   const formatDate = (dateString) => {
     try {
       console.log("Formatting date string:", dateString)
@@ -156,7 +146,7 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
         return 'Invalid Date'
       }
 
-      const formatted = format(date, 'PPP') // e.g., "April 29, 2023"
+      const formatted = format(date, 'PPP')
       console.log("Formatted date:", formatted)
       return formatted
     } catch (error) {
@@ -165,7 +155,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
     }
   }
 
-  // Modified formatTime helper function
   const formatTime = (dateString) => {
     try {
       if (!dateString) {
@@ -192,7 +181,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
     }
   }
 
-  // Modified bills fetching with date logging
   useEffect(() => {
     const fetchBills = async () => {
       try {
@@ -216,12 +204,10 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
         const data = await response.json()
         console.log("Raw bills data:", data)
         
-        // Filter bills for the logged-in doctor
         const doctorBills = Array.isArray(data) 
           ? data.filter(bill => bill.doctor_name.toLowerCase() === profile?.user?.full_name.toLowerCase())
           : data.doctor_name.toLowerCase() === profile?.user?.full_name.toLowerCase() ? [data] : []
         
-        // Sort bills by date (most recent first)
         const sortedBills = doctorBills.sort((a, b) => 
           new Date(b.created_at) - new Date(a.created_at)
         )
@@ -240,7 +226,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
     }
   }, [profile])
 
-  // Add this useEffect to fetch medications
   useEffect(() => {
     const fetchMedications = async () => {
       try {
@@ -274,6 +259,38 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
     fetchMedications()
   }, [])
 
+  useEffect(() => {
+    const fetchPharmacyOrders = async () => {
+      try {
+        const token = JSON.parse(localStorage.getItem('jwt'));
+        if (!token) {
+          console.error('No token found');
+          return;
+        }
+
+        const response = await fetch('http://localhost:8000/api/features/pharmacy-orders/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch pharmacy orders');
+        }
+
+        const data = await response.json();
+        setPharmacyOrders(data);
+      } catch (error) {
+        console.error('Error fetching pharmacy orders:', error);
+        toast.error("Failed to load pharmacy orders");
+      } finally {
+        setLoadingPharmacyOrders(false);
+      }
+    };
+
+    fetchPharmacyOrders();
+  }, []);
+
   const handleDurationChange = (medicineId, value) => {
     const duration = parseInt(value) || 1
     setSelectedMedications(prev =>
@@ -282,7 +299,7 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
           ? { 
               ...med, 
               duration,
-              quantity: duration // Update quantity to match duration
+              quantity: duration
             }
           : med
       )
@@ -307,7 +324,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
     med.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Add formatCurrency helper function
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -323,7 +339,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
         return
       }
 
-      // Format medications according to the API's expected structure
       const formattedMedications = selectedMedications.map(med => ({
         medicine: parseInt(med.id),
         dosage: med.dosage,
@@ -399,7 +414,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
       const data = await response.json()
       console.log('Bill created:', data)
 
-      // Show success message with bill details
       toast.success(
         <div>
           <p>Bill created successfully</p>
@@ -408,7 +422,6 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
         </div>
       )
 
-      // Refresh bills list
       fetchBills()
       
       return data
@@ -418,6 +431,34 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
       return null
     }
   }
+
+  const handleCancelAppointment = async (appointmentId) => {
+    try {
+      const token = JSON.parse(localStorage.getItem('jwt'));
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:8000/api/features/appointment/cancel/${appointmentId}/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to cancel appointment');
+      }
+
+      toast.success('Appointment cancelled successfully');
+      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      toast.error(error.message || 'Failed to cancel appointment');
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col gap-8 p-8">
@@ -515,7 +556,7 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
       <Tabs defaultValue="appointments">
         <TabsList>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="prescribe">Prescribe</TabsTrigger>
+          <TabsTrigger value="pharmacy-orders">Pharmacy Orders</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="bills">Past Bills</TabsTrigger>
@@ -582,31 +623,19 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          {appointment.status === 'completed' && (
-                            <Button 
-                              size="sm"
-                              variant="outline"
-                              onClick={() => createBill(appointment.id)}
-                              className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700"
-                            >
-                              Create Bill
-                            </Button>
-                          )}
                           {appointment.status === 'pending' && (
                             <>
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => {
-                                  console.log('Reschedule appointment:', appointment.id)
-                                }}
+                                onClick={() => handleCancelAppointment(appointment.id)}
                               >
-                                Reschedule
+                                Cancel
                               </Button>
                               <Button 
                                 size="sm"
                                 onClick={() => {
-                                  console.log('Start consultation:', appointment.id)
+                                  navigate(`/prescription/${appointment.id}`)
                                 }}
                               >
                                 Start Consultation
@@ -872,15 +901,15 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
                         <div>
                           <p className="font-medium">{bill.patient_name || 'Unknown Patient'}</p>
                           <p className="text-sm text-muted-foreground">
-                            Bill #{bill.id} • {formatDate(bill.created_at)}
+                            Bill #{bill.id} • {formatDate(bill.bill_date)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="font-medium text-green-600">₹{bill.amount || 0}</p>
+                          <p className="font-medium text-green-600">₹{bill.total_amount || 0}</p>
                           <p className="text-sm text-muted-foreground">
-                            {bill.status === 'paid' ? 'Paid' : 'Pending'}
+                            {bill.payment_type}
                           </p>
                         </div>
                         <Button 
@@ -901,6 +930,64 @@ export function DoctorDashboard() {  // Renamed from PatientDashboard
                   <p className="text-sm text-muted-foreground">
                     You haven't created any bills yet.
                   </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pharmacy-orders" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pharmacy Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingPharmacyOrders ? (
+                <div className="flex items-center justify-center p-4">
+                  <span className="loading loading-spinner loading-md"></span>
+                </div>
+              ) : pharmacyOrders.length > 0 ? (
+                <div className="space-y-4">
+                  {pharmacyOrders.map((order) => (
+                    <div 
+                      key={order.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {order.patient_name?.charAt(0)?.toUpperCase() || 'P'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{order.patient_name || 'Unknown Patient'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Pharmacy: {order.pharmacy_name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="font-medium">
+                            OTP: {order.otp}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              order.status === 'completed' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No pharmacy orders found</p>
                 </div>
               )}
             </CardContent>
